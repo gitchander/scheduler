@@ -2,13 +2,13 @@ package scheduler
 
 import "time"
 
-type nexter interface {
+type Nexter interface {
 	Next(t time.Time) time.Time
 }
 
-type secondNexter struct{}
+type SecondNexter struct{}
 
-func (secondNexter) Next(t time.Time) time.Time {
+func (SecondNexter) Next(t time.Time) time.Time {
 
 	next := t.Truncate(time.Second)
 
@@ -19,14 +19,14 @@ func (secondNexter) Next(t time.Time) time.Time {
 	return next
 }
 
-type minuteNexter struct {
-	sec int
+type MinuteNexter struct {
+	Second int
 }
 
-func (n *minuteNexter) Next(t time.Time) time.Time {
+func (n MinuteNexter) Next(t time.Time) time.Time {
 
 	next := t.Truncate(time.Minute)
-	next = next.Add(time.Second * time.Duration(n.sec))
+	next = next.Add(time.Second * time.Duration(n.Second))
 
 	if next.Before(t) {
 		next = next.Add(time.Minute)
@@ -35,15 +35,15 @@ func (n *minuteNexter) Next(t time.Time) time.Time {
 	return next
 }
 
-type hourNexter struct {
-	min, sec int
+type HourNexter struct {
+	Minute, Second int
 }
 
-func (n *hourNexter) Next(t time.Time) time.Time {
+func (n HourNexter) Next(t time.Time) time.Time {
 
 	next := t.Truncate(time.Hour)
-	next = next.Add(time.Minute*time.Duration(n.min) +
-		time.Second*time.Duration(n.sec))
+	next = next.Add(time.Minute*time.Duration(n.Minute) +
+		time.Second*time.Duration(n.Second))
 
 	if next.Before(t) {
 		next = next.Add(time.Hour)
@@ -52,14 +52,14 @@ func (n *hourNexter) Next(t time.Time) time.Time {
 	return next
 }
 
-type dayNexter struct {
-	hour, min, sec int
+type DayNexter struct {
+	Hour, Minute, Second int
 }
 
-func (n *dayNexter) Next(t time.Time) time.Time {
+func (n DayNexter) Next(t time.Time) time.Time {
 
 	year, month, day := t.Date()
-	next := time.Date(year, month, day, n.hour, n.min, n.sec, 0, t.Location())
+	next := time.Date(year, month, day, n.Hour, n.Minute, n.Second, 0, t.Location())
 
 	if next.Before(t) {
 		next = next.Add(time.Hour * 24)
