@@ -6,20 +6,20 @@ import (
 )
 
 type Task struct {
-	Runner
-	Nexter
+	err error
+	r   Runner
+	d   delayer
 }
 
-func loopTask(wg *sync.WaitGroup, quit <-chan struct{}, n Nexter, r Runner) {
+func loopTask(wg *sync.WaitGroup, quit <-chan struct{}, r Runner, n delayer) {
 
 	defer wg.Done()
 
 	for {
-		var (
-			now  = time.Now()
-			next = n.Next(now)
-			d    = next.Sub(now)
-		)
+		d := n.getDelay()
+		if d < 0 {
+			return
+		}
 
 		select {
 		case <-quit:
@@ -31,44 +31,55 @@ func loopTask(wg *sync.WaitGroup, quit <-chan struct{}, n Nexter, r Runner) {
 	}
 }
 
-/*
-func EverySecond(r Runner) *Task {
-	return &Task{r, SecondNexter{}}
+func EverySecond(r Runner) (t Task) {
+
+	t.r = r
+	t.d = secondDelayer{}
+
+	return
 }
 
-func EveryMinute(sec int, r Runner) (*Task, error) {
+func EveryMinute(sec int, r Runner) (t Task) {
 
-	if err := checkSecond(sec); err != nil {
-		return nil, err
+	if t.err = checkSecond(sec); t.err != nil {
+		return
 	}
 
-	return &Task{r, &MinuteNexter{sec}}, nil
+	t.r = r
+	t.d = &minuteDelayer{sec}
+
+	return
 }
 
-func EveryHour(min, sec int, r Runner) (*Task, error) {
+func EveryHour(min, sec int, r Runner) (t Task) {
 
-	if err := checkMinute(min); err != nil {
-		return nil, err
+	if t.err = checkMinute(min); t.err != nil {
+		return
 	}
-	if err := checkSecond(sec); err != nil {
-		return nil, err
+	if t.err = checkSecond(sec); t.err != nil {
+		return
 	}
 
-	return &Task{r, &HourNexter{min, sec}}, nil
+	t.r = r
+	t.d = &hourDelayer{min, sec}
+
+	return
 }
 
-func EveryDay(hour, min, sec int, r Runner) (*Task, error) {
+func EveryDay(hour, min, sec int, r Runner) (t Task) {
 
-	if err := checkHour(hour); err != nil {
-		return nil, err
+	if t.err = checkHour(hour); t.err != nil {
+		return
 	}
-	if err := checkMinute(min); err != nil {
-		return nil, err
+	if t.err = checkMinute(min); t.err != nil {
+		return
 	}
-	if err := checkSecond(sec); err != nil {
-		return nil, err
+	if t.err = checkSecond(sec); t.err != nil {
+		return
 	}
 
-	return &Task{r, &DayNexter{hour, min, sec}}, nil
+	t.r = r
+	t.d = &dayDelayer{hour, min, sec}
+
+	return
 }
-*/

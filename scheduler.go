@@ -1,6 +1,9 @@
 package scheduler
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type Scheduler struct {
 	open bool
@@ -8,21 +11,37 @@ type Scheduler struct {
 	quit chan struct{}
 }
 
-func Open(ts ...Task) *Scheduler {
+func Open(ts ...Task) (*Scheduler, error) {
 
-	s := &Scheduler{
-		open: true,
-		wg:   new(sync.WaitGroup),
-		quit: make(chan struct{}),
+	const formatError = "target number %d error: %s"
+
+	for i, t := range ts {
+		if t.err != nil {
+			return nil, fmt.Errorf(formatError, i+1, t.err)
+		}
+		if t.r == nil {
+			return nil, fmt.Errorf(formatError, i+1, "Runner is nil")
+		}
+		if t.d == nil {
+			return nil, fmt.Errorf(formatError, i+1, "delayer is nil")
+		}
 	}
 
-	s.wg.Add(len(ts))
+	var (
+		wg   = new(sync.WaitGroup)
+		quit = make(chan struct{})
+	)
 
+	wg.Add(len(ts))
 	for _, t := range ts {
-		go loopTask(s.wg, s.quit, t.Nexter, t.Runner)
+		go loopTask(wg, quit, t.r, t.d)
 	}
 
-	return s
+	return &Scheduler{
+		open: true,
+		wg:   wg,
+		quit: quit,
+	}, nil
 }
 
 func (s *Scheduler) Close() error {

@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gitchander/scheduler"
 )
 
 func main() {
-	everySecond()
+	if err := everySecond(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 const (
@@ -41,136 +44,152 @@ func (nowRunner) Run() {
 	fmt.Println(time.Now())
 }
 
-func everySecond() {
+func everySecond() error {
 
 	fn := func() {
 		fmt.Println(time.Now())
 	}
 
-	t := scheduler.Task{
-		Runner: funcRunner{fn},
-		Nexter: scheduler.SecondNexter{},
+	s, err := scheduler.Open(
+		scheduler.EverySecond(funcRunner{fn}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(20 * time.Second)
+
+	return nil
 }
 
-func everyMinute() {
+func everyMinute() error {
+
+	sec := 27
 
 	fn := func() {
 		fmt.Println(time.Now())
 	}
 
-	t := scheduler.Task{
-		Runner: funcRunner{fn},
-		Nexter: scheduler.MinuteNexter{
-			Second: 15,
-		},
+	s, err := scheduler.Open(
+		scheduler.EveryMinute(sec, funcRunner{fn}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(10 * time.Minute)
+
+	return nil
 }
 
-func everyHour() {
+func everyHour() error {
 
-	t := scheduler.Task{
-		Runner: nowRunner{},
-		Nexter: scheduler.HourNexter{
-			Minute: 11,
-			Second: 27,
-		},
+	var (
+		min = 11
+		sec = 27
+	)
+
+	s, err := scheduler.Open(
+		scheduler.EveryHour(min, sec, nowRunner{}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(5 * time.Minute)
+
+	return nil
 }
 
-func everyDay() {
+func everyDay() error {
 
-	t := scheduler.Task{
-		Runner: nowRunner{},
-		Nexter: scheduler.DayNexter{
-			Hour:   17,
-			Minute: 43,
-			Second: 21,
-		},
+	var (
+		hour = 17
+		min  = 43
+		sec  = 21
+	)
+
+	s, err := scheduler.Open(
+		scheduler.EveryDay(hour, min, sec, nowRunner{}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(5 * time.Minute)
+
+	return nil
 }
 
-func everyMidnight() {
+func everyMidnight() error {
 
-	t := scheduler.Task{
-		Runner: nowRunner{},
-		Nexter: scheduler.DayNexter{
-			Hour:   0,
-			Minute: 0,
-			Second: 0,
-		},
+	var (
+		hour = 0
+		min  = 0
+		sec  = 0
+	)
+
+	t := scheduler.EveryDay(hour, min, sec, nowRunner{})
+
+	s, err := scheduler.Open(t)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(5 * time.Minute)
+
+	return nil
 }
 
-func everyNoon() {
+func everyNoon() error {
 
-	t := scheduler.Task{
-		Runner: nowRunner{},
-		Nexter: scheduler.DayNexter{
-			Hour:   12,
-			Minute: 0,
-			Second: 0,
-		},
+	var (
+		hour = 12
+		min  = 0
+		sec  = 0
+	)
+
+	t := scheduler.EveryDay(hour, min, sec, nowRunner{})
+
+	s, err := scheduler.Open(t)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(5 * time.Minute)
+
+	return nil
 }
 
-func every15SecondV1() {
+func every15SecondV1() error {
 
 	fn := func() {
 		fmt.Println(time.Now())
 	}
 
-	var ts []scheduler.Task
-
-	for sec := 0; sec < secondsPerMinute; sec += 15 {
-
-		t := scheduler.Task{
-			Runner: funcRunner{fn},
-			Nexter: scheduler.MinuteNexter{
-				Second: sec,
-			},
-		}
-
-		ts = append(ts, t)
+	s, err := scheduler.Open(
+		scheduler.EveryMinute(0, funcRunner{fn}),
+		scheduler.EveryMinute(15, funcRunner{fn}),
+		scheduler.EveryMinute(30, funcRunner{fn}),
+		scheduler.EveryMinute(45, funcRunner{fn}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(ts...)
 	defer s.Close()
 
 	time.Sleep(3 * time.Minute)
+
+	return nil
 }
 
-func every15SecondV2() {
+func every15SecondV2() error {
 
 	fn := func() {
 		if now := time.Now(); now.Second()%15 == 0 {
@@ -178,18 +197,20 @@ func every15SecondV2() {
 		}
 	}
 
-	t := scheduler.Task{
-		Runner: funcRunner{fn},
-		Nexter: scheduler.SecondNexter{},
+	s, err := scheduler.Open(
+		scheduler.EverySecond(funcRunner{fn}),
+	)
+	if err != nil {
+		return err
 	}
-
-	s := scheduler.Open(t)
 	defer s.Close()
 
 	time.Sleep(3 * time.Minute)
+
+	return nil
 }
 
-func secondDots() {
+func secondDots() error {
 
 	sec := 0
 
@@ -203,25 +224,21 @@ func secondDots() {
 		fmt.Println(".")
 	}
 
-	taskSec := scheduler.Task{
-		Runner: funcRunner{fnSec},
-		Nexter: scheduler.SecondNexter{},
+	s, err := scheduler.Open(
+		scheduler.EverySecond(funcRunner{fnSec}),
+		scheduler.EveryMinute(sec, funcRunner{fnMin}),
+	)
+	if err != nil {
+		return err
 	}
-
-	taskMin := scheduler.Task{
-		Runner: funcRunner{fnMin},
-		Nexter: scheduler.MinuteNexter{
-			Second: sec,
-		},
-	}
-
-	s := scheduler.Open(taskSec, taskMin)
 	defer s.Close()
 
 	time.Sleep(10 * time.Minute)
+
+	return nil
 }
 
-func alarmClock() {
+func alarmClock() error {
 
 	fn := func() {
 		now := time.Now()
@@ -234,69 +251,75 @@ func alarmClock() {
 		default:
 			return
 		}
-		fmt.Println("Alarm!")
+		fmt.Println(time.Now(), "Alarm!")
 	}
 
-	t := scheduler.Task{
-		Runner: funcRunner{fn},
-		Nexter: scheduler.DayNexter{
-			Hour:   18,
-			Minute: 21,
-			Second: 0,
-		},
-	}
+	var (
+		hour = 12
+		min  = 47
+		sec  = 17
+	)
 
-	s := scheduler.Open(t)
+	s, err := scheduler.Open(
+		scheduler.EveryDay(hour, min, sec, funcRunner{fn}),
+	)
+	if err != nil {
+		return err
+	}
 	defer s.Close()
 
 	time.Sleep(10 * time.Minute)
+
+	return nil
 }
 
-func everyHalfHour() {
+func everyHalfHour() error {
 
 	var ts []scheduler.Task
 
+	const sec = 0
+
 	for min := 0; min < minutesPerHour; min += 30 {
-
-		t := scheduler.Task{
-			Runner: nowRunner{},
-			Nexter: scheduler.HourNexter{
-				Minute: min,
-				Second: 0,
-			},
-		}
-
+		t := scheduler.EveryHour(min, sec, nowRunner{})
 		ts = append(ts, t)
 	}
 
-	s := scheduler.Open(ts...)
+	s, err := scheduler.Open(ts...)
+	if err != nil {
+		return err
+	}
 	defer s.Close()
 
 	time.Sleep(3 * time.Hour)
+
+	return nil
 }
 
-func everyWeek() {
+func everyWeek() error {
 
 	var weekday = time.Wednesday
 
 	fn := func() {
-		now := time.Now()
-		if now.Weekday() == weekday {
+		if now := time.Now(); now.Weekday() == weekday {
 			fmt.Println(now)
 		}
 	}
 
-	t := scheduler.Task{
-		Runner: funcRunner{fn},
-		Nexter: scheduler.DayNexter{
-			Hour:   11,
-			Minute: 38,
-			Second: 25,
-		},
-	}
+	var (
+		hour = 18
+		min  = 21
+		sec  = 17
+	)
 
-	s := scheduler.Open(t)
+	s, err := scheduler.Open(
+		scheduler.EveryDay(hour, min, sec, funcRunner{fn}),
+	)
+	if err != nil {
+		return err
+	}
 	defer s.Close()
 
 	time.Sleep(5 * time.Minute)
+
+	return nil
 }
